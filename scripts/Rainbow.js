@@ -1,24 +1,18 @@
 ﻿/*
 Rainbow.js
-created by flat-yr
-
-nizimaLIVEのスクリプトに取り込むことで、任意の箇所を虹色に変えることができます。
-
-そのまま取り込んでも使用できません。
-使用するには、当コードの一部を編集する必要があります。
-
-書き換える場所は当コードの一番下にあります。//****が目印です。
-ご自身のLive2Dモデルのパーツ名、アートメッシュ名で書き換えてください。
-
-色味の調整も可能です。
-update()に変更できる数値があるのでお好みで調整してください。//****が目印です。
+Created by flat-yr
+MIT License. Detail https://github.com/flat-yr/nizimaLIVE-Scripts?tab=MIT-1-ov-file
 */
 
+/*
+nizimaLIVEのスクリプトに取り込むことで、任意の箇所を虹色に変えることができます。
 
-// TODO 
-// *1: 2025/6月中にnizimaLIVEの新バージョンにてmultiplyColorの初期値が正しくなる。正しくなったらprevMultiplyColorで元の色に戻す。
-// それまではmultiplyColor=whiteでリセットする。
+当コード下部にパーツ名、またはアートメッシュ名を記載する箇所がありますので、
+そちらをご自身のLive2Dモデルのパーツ名、またはアートメッシュ名で置き換えてください。
 
+色味の調整も可能です。
+update()に編集できる数値があるのでお好みで調整してください。//****が目印です。
+*/
 
 // 線形補間
 // a 開始値, b 終了値, t 補間係数 (0.0~1.0)
@@ -28,10 +22,11 @@ function lerp(a, b, t) {
 
 // 色を変更するオブジェクト
 class Live2DObject {
-    // partあるいはdrawableを指定する
-    constructor(object) {
+    // object:partあるいはdrawableを指定する
+    // resetMultiplyColor:スクリプト終了後の色を指定する
+    constructor(object, resetMultiplyColor) {
         this.targetObject = object;
-        this.prevMultiplyColor = live.rgb(object.multiplyColor.r, object.multiplyColor.g, object.multiplyColor.b);
+        this.resetMultiplyColor = resetMultiplyColor;
     }
 }
 
@@ -53,7 +48,8 @@ class Rainbow {
         // モデルからパーツを取得する。IDと一致するパーツがあれば配列に追加、IDが間違っていたら警告ログ。
         let part = model.parts.find(n => n.id == partId);
         if(part){
-            this.live2DObjectArray.push(new Live2DObject(part));
+            let resetColor = live.rgb(1, 1, 1);
+            this.live2DObjectArray.push(new Live2DObject(part, resetColor));
         }
         else{
             console.warn(`Part with ID "${partId}" not found.`);
@@ -70,7 +66,8 @@ class Rainbow {
         // モデルからアートメッシュを取得する。IDと一致するアートメッシュがあれば配列に追加、IDが間違っていたら警告ログ。
         let drawable = model.drawables.find(n => n.id == drawableId);
         if(drawable){
-            this.live2DObjectArray.push(new Live2DObject(drawable));
+            let resetColor = drawable.mocMultiplyColor;
+            this.live2DObjectArray.push(new Live2DObject(drawable, resetColor));
         }
         else{
             console.warn(`Drawable with ID "${drawableId}" not found.`);
@@ -80,9 +77,7 @@ class Rainbow {
     // 色を元の状態に戻す
     reset() {
         this.live2DObjectArray.forEach(n => {
-            // TODO *1
-            // n.targetObject.multiplyColor = live.rgb(n.prevMultiplyColor.r, n.prevMultiplyColor.g, n.prevMultiplyColor.b);
-            n.targetObject.multiplyColor = live.rgb(1, 1, 1);
+            n.targetObject.multiplyColor = n.resetMultiplyColor;
         });
         this.live2DObjectArray.length = 0;
         this.prevTime = 0;
@@ -91,10 +86,11 @@ class Rainbow {
  
     update() {
         // ******************************************************************************************************************** //
-        // 色の変化を設定できます。お好みで編集してください。
-        const MIN_VALUE_RGB = 0;    // RGBの最低値。（原色にするなら0、原色より明るくするなら数値を高めにする）
-        const MAX_VALUE_RGB = 255;  // RGBの最高値。（基本は255、より明るくするなら255を超えてもOK）
-        const LOOP_SECONDS = 2;     // 虹色の変化が1周するまでの秒数。（高速にしたいなら数値を低くする）
+        // こちらで色の変化を調整できます。お好みで編集してください。
+       
+        const MIN_VALUE_RGB = 180;    // RGBの最低値。（原色にするなら0、原色より明るくするなら数値を高めにする）
+        const MAX_VALUE_RGB = 300;  // RGBの最高値。（基本は255、より明るくするなら255を超えてもOK）
+        const LOOP_SECONDS = 1.8;     // 虹色の変化が1周するまでの秒数。（高速にしたいなら数値を低くする）
         // ******************************************************************************************************************** //
 
         // 計算用
@@ -191,7 +187,13 @@ let rainbow = new Rainbow();
 
 function onEnable() {
     // ******************************************************************************************************************** //
-    // 虹色にしたいパーツ名、アートメッシュ名を指定します。
+    // こちらで虹色にしたいパーツ名、アートメッシュ名を指定します。
+    // 
+    // 虹色にしたいパーツ、アートメッシュの分だけ、行を増やしたり減らしたりしてください。
+    // 
+    // ご自身のLive2Dモデルのパーツ、アートメッシュ名で置き換えてください。
+
+    // パーツを指定している部分
     rainbow.addPart("PartHairSideL");
     rainbow.addPart("PartHairSideR");
     rainbow.addPart("PartHairAho");
@@ -204,7 +206,9 @@ function onEnable() {
     rainbow.addPart("PartBraidsR");
     rainbow.addPart("PartHairBack");
 
+    // アートメッシュを指定している部分
     rainbow.addDrawable("ArtMesh243");
+
     // ******************************************************************************************************************** //
 }
 
